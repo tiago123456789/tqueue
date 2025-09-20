@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/tiago123456789/tqueue/pkg/client"
 
@@ -21,8 +21,10 @@ func main() {
 		User:     os.Getenv("USER_ADMIN"),
 		Password: os.Getenv("PASSWORD"),
 		Queue:    "t",
-		Handler: func(message string) error {
-			fmt.Println("Handler => Message received:", message)
+		Handler: func(message client.Message) error {
+			log.Println("message: ", message.Message)
+			log.Println("id: ", message.Id)
+			time.Sleep(5 * time.Second)
 			return nil
 		},
 	})
@@ -30,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer consumer.Disconnect()
+	// defer consumer.Disconnect()
 
 	consumer.Start()
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/tiago123456789/tqueue/pkg/instruction"
 	packagetcp "github.com/tiago123456789/tqueue/pkg/packageTcp"
 )
 
@@ -14,7 +15,7 @@ type ConsumerOptions struct {
 	User     string
 	Password string
 	Queue    string
-	Handler  func(string) error
+	Handler  func(Message) error
 }
 
 type IConsumer interface {
@@ -55,7 +56,21 @@ func (p *Consumer) Start() {
 			partMessage += string(buf)
 		} else if code == packagetcp.COMPLETE {
 			for _, item := range items {
-				p.options.Handler(item)
+				if item == instruction.RESPONSE_OK {
+					continue
+				}
+
+				message, err := packagetcp.GetMessage(item)
+				if err != nil {
+					return
+				}
+				err = p.options.Handler(Message{
+					Id:      message.Id,
+					Message: message.Message,
+				})
+				if err == nil {
+					(*p.conn).Write([]byte("D|" + string(message.Id) + "\n"))
+				}
 			}
 			partMessage = ""
 		}

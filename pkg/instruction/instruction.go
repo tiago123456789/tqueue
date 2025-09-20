@@ -3,6 +3,7 @@ package instruction
 const AUTH = "AUTH"
 const PRODUCER = 'P'
 const CONSUMER = 'C'
+const DELETE = 'D'
 
 const RESPONSE_AUTHENTICATED = "AUTHENTICATED"
 const RESPONSE_NOT_AUTHENTICATED = "NOT_AUTHENTICATED"

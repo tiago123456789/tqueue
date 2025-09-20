@@ -1,6 +1,8 @@
 package publishEngine
 
 import (
+	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/tiago123456789/tqueue/internal/queue"
@@ -19,15 +21,25 @@ func PublishEngine(tcpManager *tcp.TcpManager, queueManager queue.IQueueManager)
 
 				if queue.TotalMessages() > 0 {
 					message := queue.Pop()
-					if message == "" && len(message) == 0 {
+					if message.Message == "" && len(message.Message) == 0 {
 						continue
 					}
 
-					client.Write([]byte(message + "\n"))
+					jsonMessage, err := json.Marshal(message)
+					if err != nil {
+						log.Println(err)
+						continue
+					}
+
+					if tcpManager.IsConsumersClosed(client.RemoteAddr().String()) {
+						continue
+					}
+
+					client.Write([]byte(string(jsonMessage) + "\n"))
 					continue
 				}
-				time.Sleep(1 * time.Second)
 			}
 		}
+		time.Sleep(500 * time.Millisecond)
 	}
 }

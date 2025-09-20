@@ -24,6 +24,7 @@ type ITcpManager interface {
 	GetTotalConsumer() int
 	GetConsumers() map[string]net.Conn
 	StartServer()
+	IsConsumersClosed(address string) bool
 	handleConnection(conn net.Conn)
 }
 
@@ -35,6 +36,7 @@ type TcpManager struct {
 	listener                       net.Listener
 	queueManager                   queue.IQueueManager
 	publishEngine                  func(*TcpManager, queue.IQueueManager)
+	consumersClosed                map[string]bool
 }
 
 func NewTcpManager(
@@ -48,7 +50,14 @@ func NewTcpManager(
 		consumers:                      make(map[string]net.Conn),
 		queueManager:                   queueManager,
 		publishEngine:                  publishEngine,
+		consumersClosed:                make(map[string]bool),
 	}
+}
+
+func (t *TcpManager) IsConsumersClosed(address string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.consumersClosed[address]
 }
 
 func (t *TcpManager) AddProducer(address string, conn net.Conn) {
@@ -66,6 +75,7 @@ func (t *TcpManager) AddConsumer(address string, conn net.Conn) {
 func (t *TcpManager) RemoveProducer(address string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.consumersClosed[address] = true
 	delete(t.producers, address)
 }
 
@@ -112,15 +122,17 @@ func (t *TcpManager) handleConnection(conn net.Conn) {
 		buf := make([]byte, 1024)
 		_, err := conn.Read(buf)
 		if err == io.EOF {
-			_, err := t.GetProducer(conn.RemoteAddr().String())
-			if err == nil {
+			producer, _ := t.GetProducer(conn.RemoteAddr().String())
+			consumer, _ := t.GetConsumer(conn.RemoteAddr().String())
+			log.Println("producer: ", producer)
+			log.Println("consumer: ", consumer)
+			if producer != nil {
 				log.Println("Client producer disconnected:", conn.RemoteAddr())
 				t.queueManager.RemoveQueueProducerConnected(conn.RemoteAddr().String())
 				t.RemoveProducer(conn.RemoteAddr().String())
 			}
 
-			_, err = t.GetConsumer(conn.RemoteAddr().String())
-			if err == nil {
+			if consumer != nil {
 				log.Println("Client consumer disconnected:", conn.RemoteAddr())
 				t.queueManager.RemoveQueueConsumerConnected(conn.RemoteAddr().String())
 				t.RemoveConsumer(conn.RemoteAddr().String())
@@ -193,6 +205,14 @@ func (t *TcpManager) handleConnection(conn net.Conn) {
 		}
 
 		if code == packagetcp.COMPLETE {
+			if string(message)[0:1] == "D" {
+				queueName, _ := t.queueManager.GetQueueConsumerConnected(conn.RemoteAddr().String())
+				messageId := string(message)[2:]
+				t.queueManager.RemoveAvailableMessageById(queueName, strings.Trim(messageId, "\n"))
+				conn.Write([]byte(instruction.RESPONSE_OK + "\n"))
+				continue
+			}
+
 			queueName, _ := t.queueManager.GetQueueProducerConnected(conn.RemoteAddr().String())
 			for _, item := range items {
 				t.queueManager.Push(queueName, item)
@@ -220,6 +240,7 @@ func (t *TcpManager) StartServer() {
 			continue
 		}
 		go t.handleConnection(conn)
+		go t.queueManager.RequeueUnavailableMessages()
 		go t.publishEngine(t, t.queueManager)
 	}
 }

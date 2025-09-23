@@ -3,7 +3,6 @@ package queue
 import (
 	"errors"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/tiago123456789/tqueue/pkg/types"
@@ -12,7 +11,7 @@ import (
 type IQueueManager interface {
 	CreateQueue(queueName string)
 	Push(queueName string, message string) error
-	Pop(queueName string) (types.QueueItem, error)
+	Pop(queueName string) (*types.QueueItem, error)
 	GetQueue(queueName string) (*Queue, error)
 	GetQueueProducerConnected(connectionaAddress string) (string, error)
 	SetQueueProducerConnected(connectionaAddress string, queueName string)
@@ -26,13 +25,15 @@ type IQueueManager interface {
 }
 
 type QueueManager struct {
+	storageMode   string
 	queues        map[string]*Queue
 	producerQueue map[string]string
 	consumerQueue map[string]string
 }
 
-func NewQueueManager() *QueueManager {
+func NewQueueManager(storageMode string) *QueueManager {
 	return &QueueManager{
+		storageMode:   storageMode,
 		queues:        make(map[string]*Queue),
 		producerQueue: make(map[string]string),
 		consumerQueue: make(map[string]string),
@@ -41,10 +42,7 @@ func NewQueueManager() *QueueManager {
 
 func (q *QueueManager) RemoveAvailableMessageById(queueName string, id string) {
 	if q.queues[queueName] != nil {
-		q.queues[queueName].messagesUnavaible.GetById(
-			types.QueueItem{Id: id, Message: "", AvailableAt: time.Now()},
-		)
-		log.Println("Total messages in queue unavaible", q.queues[queueName].messagesUnavaible.Size)
+		(*q.queues[queueName].storageDriver).GetByIdFromUnavaible(id)
 	}
 }
 
@@ -87,10 +85,12 @@ func (q *QueueManager) GetQueueConsumerConnected(connectionaAddress string) (str
 }
 func (q *QueueManager) CreateQueue(queueName string) {
 	if q.queues[queueName] == nil {
+		var storageDriver IStorageDriver
+		if q.storageMode == "inmemory" {
+			storageDriver = NewInMemoryStorageDriver()
+		}
 		q.queues[queueName] = &Queue{
-			mu:                sync.Mutex{},
-			messages:          &LinkedList{},
-			messagesUnavaible: &LinkedList{},
+			storageDriver: &storageDriver,
 		}
 	}
 }
@@ -98,21 +98,21 @@ func (q *QueueManager) CreateQueue(queueName string) {
 func (q *QueueManager) Push(queueName string, message string) error {
 	if q.queues[queueName] != nil {
 		q.queues[queueName].Push(message)
-		log.Println("Message added, so total messages are:", q.queues[queueName].messages.Size)
+		log.Println("Message added, so total messages are:", (*q.queues[queueName].storageDriver).TotalMessages())
 		return nil
 	}
 
 	return errors.New("Queue not found")
 }
 
-func (q *QueueManager) Pop(queueName string) (types.QueueItem, error) {
+func (q *QueueManager) Pop(queueName string) (*types.QueueItem, error) {
 	if q.queues[queueName] != nil {
 		message := q.queues[queueName].Pop()
 		message.AvailableAt = time.Now().Add(time.Second * 30)
-		q.queues[queueName].messagesUnavaible.Append(message)
+		(*q.queues[queueName].storageDriver).PushToUnavaible(message.Message)
 		return message, nil
 	}
-	return types.QueueItem{}, errors.New("Queue not found")
+	return nil, errors.New("Queue not found")
 }
 
 func (q *QueueManager) GetQueue(queueName string) (*Queue, error) {

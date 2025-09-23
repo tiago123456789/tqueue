@@ -21,11 +21,11 @@ func PublishEngine(tcpManager *tcp.TcpManager, queueManager queue.IQueueManager)
 
 				if queue.TotalMessages() > 0 {
 					message := queue.Pop()
-					if message.Message == "" && len(message.Message) == 0 {
+					if message == nil {
 						continue
 					}
 
-					jsonMessage, err := json.Marshal(message)
+					jsonMessage, err := json.Marshal(*message)
 					if err != nil {
 						log.Println(err)
 						continue
@@ -40,6 +40,6 @@ func PublishEngine(tcpManager *tcp.TcpManager, queueManager queue.IQueueManager)
 				}
 			}
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 }

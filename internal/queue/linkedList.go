@@ -72,7 +72,6 @@ func (l *LinkedList) GetById(queueItem types.QueueItem) *Node {
 		}
 		previous = start
 		start = start.Next
-
 	}
 
 	return nil

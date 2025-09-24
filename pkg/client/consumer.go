@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/tiago123456789/tqueue/pkg/instruction"
 	packagetcp "github.com/tiago123456789/tqueue/pkg/packageTcp"
@@ -61,15 +62,16 @@ func (p *Consumer) Start() {
 					continue
 				}
 
+				if !strings.Contains(string(item), "{") {
+					continue
+				}
+
 				message, err := packagetcp.GetMessage(item)
 
 				if err != nil {
 					return
 				}
 
-				if message.Id == "" || message.Message == "" {
-					continue
-				}
 				messageToProcess := Message{
 					Id:      message.Id,
 					Message: message.Message,
@@ -78,6 +80,7 @@ func (p *Consumer) Start() {
 				if err == nil {
 					(*p.conn).Write([]byte("D|" + string(message.Id) + "\n"))
 				}
+
 			}
 		}
 	}

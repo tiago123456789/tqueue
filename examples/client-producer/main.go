@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"os"
 	"time"
@@ -30,8 +30,17 @@ func main() {
 	}
 	defer producer.Disconnect()
 
-	for i := 0; i < 10; i++ {
-		if err := producer.Send(fmt.Sprintf("Message %d", i)); err != nil {
+	item := map[string]interface{}{
+		"userId": 1,
+		"title":  "Hi, this is a test message",
+	}
+	for i := 0; i < 1000; i++ {
+		body, err := json.Marshal(item)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := producer.Send(string(body)); err != nil {
 			log.Println(err)
 			return
 		}

@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/tiago123456789/tqueue/pkg/client"
@@ -32,11 +30,6 @@ func main() {
 
 			fmt.Println("Message received:", string(body))
 
-			resp, err := http.Post("https://boring-cricket-53.webhook.cool", "application/json", bytes.NewBuffer(body))
-			defer resp.Body.Close()
-			if err != nil {
-				return err
-			}
 			return nil
 		},
 	})

@@ -3,8 +3,11 @@ package queue
 import (
 	"errors"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/tiago123456789/tqueue/internal/database"
+	"github.com/tiago123456789/tqueue/internal/storageDriver"
 	"github.com/tiago123456789/tqueue/pkg/types"
 )
 
@@ -25,6 +28,7 @@ type IQueueManager interface {
 }
 
 type QueueManager struct {
+	mu            sync.Mutex
 	storageMode   string
 	queues        map[string]*Queue
 	producerQueue map[string]string
@@ -57,9 +61,13 @@ func (q *QueueManager) RequeueUnavailableMessages() {
 }
 
 func (q *QueueManager) RemoveQueueProducerConnected(connectionaAddress string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	delete(q.producerQueue, connectionaAddress)
 }
 func (q *QueueManager) SetQueueProducerConnected(connectionaAddress string, queueName string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	q.producerQueue[connectionaAddress] = queueName
 }
 
@@ -71,9 +79,13 @@ func (q *QueueManager) GetQueueProducerConnected(connectionaAddress string) (str
 }
 
 func (q *QueueManager) RemoveQueueConsumerConnected(connectionaAddress string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	delete(q.consumerQueue, connectionaAddress)
 }
 func (q *QueueManager) SetQueueConsumerConnected(connectionaAddress string, queueName string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	q.consumerQueue[connectionaAddress] = queueName
 }
 
@@ -85,12 +97,14 @@ func (q *QueueManager) GetQueueConsumerConnected(connectionaAddress string) (str
 }
 func (q *QueueManager) CreateQueue(queueName string) {
 	if q.queues[queueName] == nil {
-		var storageDriver IStorageDriver
+		var storage types.IStorageDriver
 		if q.storageMode == "inmemory" {
-			storageDriver = NewInMemoryStorageDriver()
+			storage = storageDriver.NewInMemoryStorageDriver()
+		} else if q.storageMode == "sqlite" {
+			storage = storageDriver.NewSqliteStorageDriver(database.GetDB(), queueName)
 		}
 		q.queues[queueName] = &Queue{
-			storageDriver: &storageDriver,
+			storageDriver: &storage,
 		}
 	}
 }
@@ -98,7 +112,6 @@ func (q *QueueManager) CreateQueue(queueName string) {
 func (q *QueueManager) Push(queueName string, message string) error {
 	if q.queues[queueName] != nil {
 		q.queues[queueName].Push(message)
-		log.Println("Message added, so total messages are:", (*q.queues[queueName].storageDriver).TotalMessages())
 		return nil
 	}
 

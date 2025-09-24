@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -16,23 +17,25 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	consumer := client.NewConsumer(&client.ConsumerOptions{
+	producer := client.NewProducer(&client.ProducerOptions{
 		Address:  "localhost:8080",
 		User:     os.Getenv("USER_ADMIN"),
 		Password: os.Getenv("PASSWORD"),
-		Queue:    "t",
-		Handler: func(message client.Message) error {
-			log.Println("message: ", message.Message)
-			log.Println("id: ", message.Id)
-			time.Sleep(5 * time.Second)
-			return nil
-		},
+		Queue:    "test",
 	})
-	_, err = consumer.Connect()
+
+	_, err = producer.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
-	// defer consumer.Disconnect()
+	defer producer.Disconnect()
 
-	consumer.Start()
+	for i := 0; i < 10; i++ {
+		if err := producer.Send(fmt.Sprintf("Message %d", i)); err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	time.Sleep(5 * time.Second)
 }

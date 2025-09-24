@@ -1,4 +1,4 @@
-package queue
+package storageDriver
 
 import "github.com/tiago123456789/tqueue/pkg/types"
 

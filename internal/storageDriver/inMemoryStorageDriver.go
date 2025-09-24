@@ -1,4 +1,4 @@
-package queue
+package storageDriver
 
 import (
 	"sync"
@@ -7,15 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/tiago123456789/tqueue/pkg/types"
 )
-
-type IStorageDriver interface {
-	GetByIdFromUnavaible(id string) *types.QueueItem
-	PushToUnavaible(message string)
-	Push(message string)
-	Pop() *types.QueueItem
-	TotalMessages() int
-	RequeueUnavailableMessages()
-}
 
 type InMemoryStorageDriver struct {
 	mu                sync.Mutex

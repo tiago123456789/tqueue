@@ -35,7 +35,11 @@ func PublishEngine(tcpManager *tcp.TcpManager, queueManager queue.IQueueManager)
 						continue
 					}
 
-					client.Write([]byte(string(jsonMessage) + "\n"))
+					_, err = client.Write([]byte(string(jsonMessage) + "\n"))
+					if err != nil {
+						log.Println(err)
+						continue
+					}
 					continue
 				}
 			}

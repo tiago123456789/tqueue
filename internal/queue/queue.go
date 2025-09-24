@@ -12,7 +12,7 @@ type IQueue interface {
 }
 
 type Queue struct {
-	storageDriver *IStorageDriver
+	storageDriver *types.IStorageDriver
 }
 
 func (q *Queue) RequeueUnavailableMessages() {

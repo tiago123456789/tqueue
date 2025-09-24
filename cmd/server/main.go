@@ -4,11 +4,12 @@ import (
 	"flag"
 	"log"
 
+	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tiago123456789/tqueue/internal/database"
 	"github.com/tiago123456789/tqueue/internal/publishEngine"
 	"github.com/tiago123456789/tqueue/internal/queue"
 	"github.com/tiago123456789/tqueue/internal/tcp"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -23,6 +24,14 @@ func main() {
 
 	if *storageMode != "inmemory" && *storageMode != "sqlite" {
 		log.Fatal("Invalid storage mode")
+	}
+
+	if *storageMode == "sqlite" {
+		err := database.SetupDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	}
 
 	var queueManager = queue.NewQueueManager(*storageMode)

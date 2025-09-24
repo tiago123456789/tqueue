@@ -55,26 +55,31 @@ func (p *Consumer) Start() {
 		if code == packagetcp.INCOMPLETE {
 			partMessage += string(buf)
 		} else if code == packagetcp.COMPLETE {
+			partMessage = ""
 			for _, item := range items {
 				if item == instruction.RESPONSE_OK {
 					continue
 				}
 
 				message, err := packagetcp.GetMessage(item)
+
 				if err != nil {
 					return
 				}
-				err = p.options.Handler(Message{
+
+				if message.Id == "" || message.Message == "" {
+					continue
+				}
+				messageToProcess := Message{
 					Id:      message.Id,
 					Message: message.Message,
-				})
+				}
+				err = p.options.Handler(messageToProcess)
 				if err == nil {
 					(*p.conn).Write([]byte("D|" + string(message.Id) + "\n"))
 				}
 			}
-			partMessage = ""
 		}
-
 	}
 }
 

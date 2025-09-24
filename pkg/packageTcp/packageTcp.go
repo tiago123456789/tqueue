@@ -15,6 +15,7 @@ const COMPLETE = 0
 
 func ParseMessage(previousBuf []byte, buf []byte) ([]string, int) {
 	items := []string{}
+
 	if string(previousBuf) != "" && bytes.Contains(buf, []byte("\n")) {
 		partMessage := string(previousBuf) + string(buf)
 		startPostion := 0

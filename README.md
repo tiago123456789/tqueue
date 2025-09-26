@@ -28,13 +28,20 @@ The project is message queue implemented over tcp.
 
 ## HOW TO RUN THE SERVER
 
+- Before start the server you need to create the .env file where contains:
+```txt
+USER_ADMIN=user_here
+PASSWORD=password_here
+```
+- The folder **examples** has examples how to use publish and consume the messages from the **tqueue**
+
 - To run the server you need to have the go installed in your machine.
 ```bash
-go run cmd/server/main.go -storage=sqlite
+go run cmd/server/main.go -storage=sqlite // The queue is storage on sqlite, so if you restart the server you don't lose the messages
 ```
 OR
 ```bash
-go run cmd/server/main.go -storage=inmemory
+go run cmd/server/main.go -storage=inmemory // The queue is storage in memory, so if you restart the server you will lose the messages.
 ```
 
 
